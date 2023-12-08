@@ -20,13 +20,6 @@ import CardContent from "@mui/material/CardContent";
 import Modal from "@mui/material/Modal";
 import Avatar from "@mui/material/Avatar";
 
-const Box = styled(MuiBox)({
-  backgroundColor: "#3f434a",
-  borderRadius: "10px", // rounded borders
-  padding: "20px", // some padding
-  margin: "10px", // some margin
-});
-
 function MovieGuesser() {
   const [data, setData] = useState(null);
   const [targetMovie, setTargetMovie] = useState(null);
@@ -44,17 +37,42 @@ function MovieGuesser() {
     top: "50%",
     left: "50%",
     transform: "translate(-50%, -50%)",
-    width: isMobile ? "95%" : "50%",
+    width: isMobile ? "90%" : "60%",
+    height: isMobile ? "90%" : "auto",
     bgcolor: "background.paper",
     border: "2px solid #68e36c",
     boxShadow: 24,
     textAlign: "center",
     backgroundImage: "linear-gradient(to right, #ff9966, #ff5e62)",
     animation: "glow 2s ease-in-out infinite alternate",
+    overflow: 'auto',
   };
 
+  const Box = styled(MuiBox)({
+    backgroundColor: "#3f434a",
+    borderRadius: "10px", // rounded borders
+    padding: isMobile ? "20px" : "20px",
+    margin: isMobile ? "15px" : "10px",
+  });
+
+  const NoStyleBox = styled(MuiBox)({
+    backgroundColor: "#3f434a",
+    borderRadius: "10px", // rounded borders
+    padding: isMobile ? "5px" : "5px",
+    margin: isMobile ? "5px" : "5px",
+  });
+
+  const ModalBox = styled(MuiBox)({
+    backgroundColor: "#3f434a",
+    borderRadius: "10px", // rounded borders
+    padding: isMobile ? "1px" : "20px",
+    margin: isMobile ? "5px" : "10px",
+  });
+
   useEffect(() => {
-    fetch("/db.json")
+    // change here to run locally or deploy
+    fetch("/movile/db.json")
+    // fetch("./public/db.json")
       .then((response) => response.json())
       .then((data) => {
         data = data.map((option) => {
@@ -89,6 +107,26 @@ function MovieGuesser() {
     return hours * 60 + minutes;
   }
 
+  async function getMoviePreview(url) {
+    const apiKey = "pk_290933a796b51976f98dc3b3b6614fabe7081615";
+    const apiUrl = `https://jsonlink.io/api/extract?url=${url}&api_key=${apiKey}`;
+
+    // Make a GET request using the Fetch API
+    return fetch(apiUrl)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status} - ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        return data; // Return the data
+      })
+      .catch((error) => {
+        console.error("An error occurred:", error);
+      });
+  }
+
   const resetGame = () => {
     const randomIndex = Math.floor(Math.random() * data.length);
     setTargetMovie(data[randomIndex]);
@@ -98,8 +136,9 @@ function MovieGuesser() {
     setPreviousGuesses([]);
   };
 
-  const handleGuess = () => {
+  const handleGuess = async () => {
     const guessedMovie = data.find((movie) => movie.Title === searchValue);
+    console.log(targetMovie);
     if (guessedMovie) {
       if (guessedMovie.Title === targetMovie.Title) {
         setResult(targetMovie.Title);
@@ -108,6 +147,8 @@ function MovieGuesser() {
         let result = {};
 
         result.Title = [guessedMovie.Title];
+        const urlData = await getMoviePreview(guessedMovie["IMDB link"]);
+        result.imgUrl = urlData.images;
 
         result.Year = [
           guessedMovie.Year,
@@ -197,12 +238,14 @@ function MovieGuesser() {
             ? "lower"
             : "higher",
         ];
-
         setResult(result);
         setPreviousGuesses((prevGuesses) => [...prevGuesses, result]);
 
         setGuesses(guesses - 1);
       }
+      const targetMovieUrlData = await getMoviePreview(
+        targetMovie["IMDB link"]
+      );
       let correctResult = {
         Title: [targetMovie.Title],
         Year: [targetMovie.Year, "green", null],
@@ -211,6 +254,7 @@ function MovieGuesser() {
         Origin: [targetMovie.Origin, "green", null],
         Director: [targetMovie.Director, "green", null],
         "IMDB rating": [targetMovie["IMDB rating"], "green", null],
+        imgUrl: targetMovieUrlData.images,
       };
       setCorrectResult(correctResult);
     }
@@ -293,7 +337,7 @@ function MovieGuesser() {
                 aria-labelledby="modal-modal-title"
                 aria-describedby="modal-modal-description"
               >
-                <Box sx={modalStyle}>
+                <ModalBox sx={modalStyle}>
                   <Typography
                     id="modal-modal-title"
                     variant="h3"
@@ -301,16 +345,25 @@ function MovieGuesser() {
                   >
                     Out of guesses...
                   </Typography>
-                  <Box
+                  <NoStyleBox
                     id="modal-modal-description"
                     sx={{ mt: 2, fontSize: "20px" }}
                   >
                     The correct movie was:
-                    <Box>
-                      <h2 style={{ color: "black" }}>{correctResult.Title}</h2>
+                    <NoStyleBox>
+                      <NoStyleBox style={{ display: "flex", alignItems: "center" }}>
+                        <h2 style={{ color: "black", marginRight: "20px" }}>
+                          {correctResult.Title}
+                        </h2>
+                        <img
+                          src={correctResult.imgUrl}
+                          alt="IMDB Image"
+                          style={{ maxWidth: "20%", height: "auto" }}
+                        />
+                      </NoStyleBox>
                       <Grid container spacing={2}>
                         {Object.keys(correctResult).map((key) =>
-                          key !== "Title" ? (
+                          key !== "Title" && key !== "imgUrl" ? (
                             <Grid item xs={6} sm={6} key={key}>
                               <Card
                                 sx={{
@@ -331,7 +384,7 @@ function MovieGuesser() {
                                 >
                                   <Typography
                                     align="center"
-                                    variant={isMobile ? "h6" : "h5"}
+                                    variant={isMobile ? "subtitle1" : "h5"}
                                     style={{ color: "black" }}
                                   >
                                     {`${key}:`}
@@ -349,10 +402,10 @@ function MovieGuesser() {
                           ) : null
                         )}
                       </Grid>
-                    </Box>
+                    </NoStyleBox>
                     <Button onClick={resetGame}>Play Again</Button>
-                  </Box>
-                </Box>
+                  </NoStyleBox>
+                </ModalBox>
               </Modal>
             </Typography>
           )}
@@ -365,7 +418,7 @@ function MovieGuesser() {
                 aria-labelledby="modal-modal-title"
                 aria-describedby="modal-modal-description"
               >
-                <Box sx={modalStyle}>
+                <ModalBox sx={modalStyle}>
                   <Typography
                     id="modal-modal-title"
                     variant="h3"
@@ -373,16 +426,25 @@ function MovieGuesser() {
                   >
                     Congratulations!
                   </Typography>
-                  <Box
+                  <NoStyleBox
                     id="modal-modal-description"
                     sx={{ mt: 2, fontSize: "20px" }}
                   >
                     The correct movie was:
-                    <Box>
-                      <h2 style={{ color: "black" }}>{correctResult.Title}</h2>
+                    <NoStyleBox>
+                      <NoStyleBox style={{ display: "flex", alignItems: "center" }}>
+                        <h2 style={{ color: "black", marginRight: "20px" }}>
+                          {correctResult.Title}
+                        </h2>
+                        <img
+                          src={correctResult.imgUrl}
+                          alt="IMDB Image"
+                          style={{ maxWidth: "20%", height: "auto" }}
+                        />
+                      </NoStyleBox>
                       <Grid container spacing={2}>
                         {Object.keys(correctResult).map((key) =>
-                          key !== "Title" ? (
+                          key !== "Title" && key !== "imgUrl" ? (
                             <Grid item xs={6} sm={6} key={key}>
                               <Card
                                 sx={{
@@ -403,7 +465,7 @@ function MovieGuesser() {
                                 >
                                   <Typography
                                     align="center"
-                                    variant={isMobile ? "h6" : "h5"}
+                                    variant={isMobile ? "subtitle1" : "h5"}
                                     style={{ color: "black" }}
                                   >
                                     {`${key}:`}
@@ -421,19 +483,28 @@ function MovieGuesser() {
                           ) : null
                         )}
                       </Grid>
-                    </Box>
+                    </NoStyleBox>
                     <Button onClick={resetGame}>Play Again</Button>
-                  </Box>
-                </Box>
+                  </NoStyleBox>
+                </ModalBox>
               </Modal>
             </Typography>
           ) : (
             result && (
               <Box>
-                <h2 style={{ color: "black" }}>{result.Title}</h2>
+                <NoStyleBox style={{ display: "flex", alignItems: "center" }}>
+                  <h2 style={{ color: "black", marginRight: "20px" }}>
+                    {result.Title}
+                  </h2>
+                  <img
+                    src={result.imgUrl}
+                    alt="IMDB Image"
+                    style={{ maxWidth: "20%", height: "auto" }}
+                  />
+                </NoStyleBox>
                 <Grid container spacing={2}>
                   {Object.keys(result).map((key) =>
-                    key !== "Title" ? (
+                    key !== "Title" && key !== "imgUrl" ? (
                       <Grid item xs={6} sm={6} key={key}>
                         <Card
                           sx={{
@@ -480,10 +551,19 @@ function MovieGuesser() {
             .reverse()
             .map((guess, index) => (
               <Box key={index}>
-                <h2 style={{ color: "black" }}>{guess.Title}</h2>
+                <NoStyleBox style={{ display: "flex", alignItems: "center" }}>
+                  <h2 style={{ color: "black", marginRight: "20px" }}>
+                    {guess.Title}
+                  </h2>
+                  <img
+                    src={guess.imgUrl}
+                    alt="IMDB Image"
+                    style={{ maxWidth: "20%", height: "auto" }}
+                  />
+                </NoStyleBox>
                 <Grid container spacing={2}>
                   {Object.keys(guess).map((key) =>
-                    key !== "Title" ? (
+                    key !== "Title" && key !== "imgUrl" ? (
                       <Grid item xs={6} sm={6} key={key}>
                         <Card
                           sx={{
@@ -525,9 +605,9 @@ function MovieGuesser() {
               </Box>
             ))}
           <Box
-          style={{
-            border: "5px solid #735231",
-          }}
+            style={{
+              border: "5px solid #735231",
+            }}
           >
             {/*  */}
             <Grid container spacing={2}>
