@@ -138,7 +138,6 @@ function MovieGuesser() {
 
   const handleGuess = async () => {
     const guessedMovie = data.find((movie) => movie.Title === searchValue);
-    console.log(targetMovie);
     if (guessedMovie) {
       if (guessedMovie.Title === targetMovie.Title) {
         setResult(targetMovie.Title);
